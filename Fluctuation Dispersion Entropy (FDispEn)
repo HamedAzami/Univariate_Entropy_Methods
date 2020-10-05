@@ -1,0 +1,134 @@
+function [Out_FDispEn, npdf]=FDispEn(x,m,nc,MA,tau)
+% 
+% This function calculates fluctuation-based dispersion entropy (FDispEn) of a univariate
+% signal x, using different mapping approaches (MA)
+%
+% Inputs:
+%
+% x: univariate signal - a vector of size 1 x N (the number of sample points)
+% m: embedding dimension
+% nc: number of classes (it is usually equal to a number between 2 and 8 - we used c=5 in Ref. [1])
+% MA: mapping approach, chosen from the following options (we used 'LOGSIG' in [1]):
+% 'LM' (linear mapping),
+% 'NCDF' (normal cumulative distribution function),
+% 'TANSIG' (tangent sigmoid),
+% 'LOGSIG' 'logarithm sigmoid',
+% 'SORT' (sorting method).
+%
+% tau: time lag (it is usually equal to 1)
+%
+% Outputs:
+%
+% Out_DispEn: scalar quantity - the DispEn of x
+% npdf: a vector of length nc^m, showing the normalized number of fluctuation-based disersion patterns of x
+%
+% Example: FDispEn(rand(1,200),2,6,'LOGSIG',1)
+%
+% Ref:
+%
+% [1] H. Azami and J. Escudero, "Amplitude- and Fluctuation-based Dispersion Entropy", Entropy, 2018.
+%
+% [2] M. Rostaghi and H. Azami, "Dispersion Entropy: A Measure for Time-Series Analysis", IEEE Signal Processing Letters. vol. 23, n. 5, pp. 610-614, 2016.
+%
+% If you use the code, please make sure that you cite the references [1] and [2].
+%
+% Hamed Azami and Javier Escudero Rodriguez
+% hamed.azami@ed.ac.uk and javier.escudero@ed.ac.uk
+%
+%  15-January-2018
+%%
+
+N=length(x);
+sigma_x=std(x);
+mu_x=mean(x);
+
+%% Mapping approaches
+
+switch MA
+    case   'LM'
+        y=mapminmax(x,0,1);
+        y(y==1)=1-1e-10;
+        y(y==0)=1e-10;
+        z=round(y*nc+0.5);
+        
+    case 'NCDF'
+        y=normcdf(x,mu_x,sigma_x);
+        y=mapminmax(y,0,1);
+        y(y==1)=1-1e-10;
+        y(y==0)=1e-10;
+        z=round(y*nc+0.5);
+        
+    case 'LOGSIG'
+        y=logsig((x-mu_x)/sigma_x);
+        y=mapminmax(y,0,1);
+        y(y==1)=1-1e-10;
+        y(y==0)=1e-10;
+        z=round(y*nc+0.5);
+        
+    case 'TANSIG'
+        y=tansig((x-mu_x)/sigma_x)+1;
+        y=mapminmax(y,0,1);
+        y(y==1)=1-1e-10;
+        y(y==0)=1e-10;
+        z=round(y*nc+0.5);
+        
+    case 'SORT'
+        x=x(1:nc*floor(N/nc));
+        N=length(x);
+        [sx osx]=sort(x);
+        Fl_NC=N/nc;
+        cx=[];
+        for i=1:nc
+            cx=[cx i*ones(1,Fl_NC)];
+        end
+        for i=1:N
+            z(i)=cx(osx==i);
+        end
+        
+end
+
+all_patterns=[1:2*nc-1]';
+
+for f=2:m-1
+    temp=all_patterns;
+    all_patterns=[];
+    j=1;
+    for w=1:2*nc-1
+        [a,b]=size(temp);
+        all_patterns(j:j+a-1,:)=[temp,w*ones(a,1)];
+        j=j+a;
+    end
+end
+
+
+N_PDE=(2*nc-1)^(m-1);
+for i=1:N_PDE
+    key(i)=0;
+    for ii=1:m-1
+        key(i)=key(i)*100+all_patterns(i,ii);
+    end
+end
+
+
+for i_h=1:m
+   ind(i_h,:)=[(i_h-1)*tau+1:N-(m-1)*tau+(i_h-1)*tau];
+end
+
+embd2 = z(ind(:,1:end));
+dembd2=diff(embd2)'+nc;
+
+emb=zeros(N-(m-1)*tau,1);
+for i_e=m-1:-1:1
+    emb=dembd2(:,i_e)*100^(i_e-1)+emb;
+end
+
+pdf=zeros(1,N_PDE);
+
+for id=1:N_PDE
+    [R,C]=find(emb==key(id));
+    pdf(id)=length(R);
+end
+
+npdf=pdf/(N-(m-1)*tau);
+p=npdf(npdf~=0);
+Out_FDispEn = -sum(p .* log(p));
