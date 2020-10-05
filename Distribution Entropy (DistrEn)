@@ -1,0 +1,42 @@
+function Out_DistrEn=DistrEn(x,m,NB,tau)
+% This function calculates distribution entropy (DistrEn) of a univariate signal x
+%
+% Inputs:
+%
+% x: univariate signal - a vector of size 1 x N (the number of sample points)
+% m: embedding dimension
+% NB: number of bins used for the calculation of histogram (NB=256, 512, 1024)
+% tau: time delay (typically equal to 1)
+%
+% Outputs:
+%
+% Out_DistrEn: scalar quantity - the DistrEn of x
+%
+%% If you use the code, please make sure that you cite Reference [1].
+% Ref:
+% [1] "Entropy Analysis of Univariate Biomedical Signals: Review and Comparison of Methods"
+%
+% Hamed Azami
+% hmd.azami@gmail.com - hazami@mgh.harvard.edu
+%  20-March-2020
+%
+% Hamed Azami
+% hmd.azami@gmail.com - hazami@mgh.harvard.edu
+%  20-March-2017
+%%
+
+
+% Normalizing
+x = (x - min(x)) ./ (max(x) - min(x));
+
+% Distance matrix
+N   = length(x) - (m-1)*tau;
+ind = hankel(1:N, N:length(x));
+vecs = x(ind(:,1:tau:end));
+D  = pdist(vecs, 'chebychev');
+%D=D/100;
+% Esimating the probability density by histogram
+H  = hist(D, linspace(0, 1, NB));
+np = H./sum(H);
+p=np(np~=0);
+Out_DistrEn = -sum(p .* log2(p))/ log2(NB);
