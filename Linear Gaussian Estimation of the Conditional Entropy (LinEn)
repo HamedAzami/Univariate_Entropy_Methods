@@ -1,0 +1,63 @@
+function [Out_En,S,Up,Am]=LinEn(X,m)
+%
+%% Linear Gaussian Estimation of the Conditional Entropy
+% Computes the conditional entropy of the first column of B conditioned to the remaining columns (A)
+% returns estimates of conditional entropy (ce) and residual covariance (S)
+% Inputs:
+%
+% X: univariate signal - a vector of size 1 x N (the number of sample points)
+% m: embedding dimension
+%
+% Outputs:
+%
+% Out_En: scalar quantity - the LinEn of X
+%
+%% If you use the code, please make sure that you cite Reference [1].
+% Ref:
+% [1] "Entropy Analysis of Univariate Biomedical Signals: Review and Comparison of Methods"
+%
+% Hamed Azami
+% hmd.azami@gmail.com - hazami@mgh.harvard.edu
+%  20-March-2020
+%%
+X=X';
+
+V=[ones(m,1) (1:m)'];
+B=ObsMat(X,1,V);
+
+%% compute Conditional entropy
+Yb=B(:,1)'; % inversion works with data organized in rows
+A=B; A(:,1)=[]; Z=A';
+
+Am=Yb/Z; % least squares!
+
+Yp=Am*Z;
+Up=Yb-Yp;
+S=cov(Up');
+
+%CondEn for the Gaussian case:
+Out_En=0.5*log(det(S))+0.5*size(Yb,1)*log(2*pi*exp(1)); %e.g., Barnett PRL 2009
+end
+
+
+%% form observation matrix (for entropy computation)
+% Y: (quantized) input multiple time series, dimension N*M
+% V: list of candidates, dimension Nc*2, Nc is number of candidates; 1st column: index of the signal; 2nd column: index of the lag
+% B: output matrix of the vectors specified from the signals Y according to the list V, with the current samples as first column
+function B=ObsMat(Y,j,V)
+if isempty(V) %if no conditioning, give back the jth series of Y
+    B=Y(:,j);
+else
+    [N,M]=size(Y);
+    Nc=size(V,1); % number of candidates
+    Lmax=max(V(:,2)); %maximum lag (across all signals)
+    
+    A=NaN*ones(N-Lmax,Nc);
+    for n=Lmax+1:N
+        for i=1:Nc %fill the i-th row of A
+            A(n-Lmax,i)=Y(n-V(i,2),V(i,1));
+        end
+    end
+    B=[Y((Lmax+1:N)',j) A]; % add current value
+end
+end
