@@ -1,0 +1,27 @@
+function Out_En=CorCE(x,m,q)
+% This function calculates corrected conditional entropy (CorCE) of a univariate signal x
+% Inputs:
+%
+% x: univariate signal - a vector of size 1 x N (the number of sample points)
+% m: embedding dimension
+% q: quantization level
+%
+% Outputs:
+%
+% Out_En: scalar quantity - the CorCE of x
+%
+%% If you use the code, please make sure that you cite Reference [1].
+% Ref:
+% [1] "Entropy Analysis of Univariate Biomedical Signals: Review and Comparison of Methods"
+%
+% Hamed Azami
+% hmd.azami@gmail.com - hazami@mgh.harvard.edu
+%  20-March-2020
+%%
+% corrected conditional entropy
+[ceX,perc]=binEn(x',m,q);
+
+eX=binShannEnt(x',q);
+
+Out_En=ceX+perc*eX; 
+end
