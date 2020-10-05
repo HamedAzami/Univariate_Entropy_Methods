@@ -1,0 +1,62 @@
+function Out_En=SampEn(x,m,r)
+%
+% This function calculates sample entropy (SampEn) of a univariate signal x
+% The algorithm has been implemented based on https://physionet.org/content/sampen/1.0.0/matlab/#files-panel
+%
+% Inputs:
+%
+% x: univariate signal - a vector of size 1 x N (the number of sample points)
+% m: embedding dimension
+% r: matching tolerance - it is usually set 0.2
+%
+% Output:
+% Out_En: scalar quantity - the SampEn of x
+%
+% Example: SampEn(rand(1,200),2,0.2)
+%
+%% If you use the code, please make sure that you cite Reference [1].
+% Ref:
+% [1] "Entropy Analysis of Univariate Biomedical Signals: Review and Comparison of Methods"
+%
+% Hamed Azami
+% hmd.azami@gmail.com - hazami@mgh.harvard.edu
+%  20-March-2020
+
+
+x = x-mean(x);
+x = x./std(x);
+M=m+1;
+n=length(x);
+lastrun=zeros(1,n);
+run=zeros(1,n);
+A=zeros(M,1);
+B=zeros(M,1);
+p=zeros(M,1);
+e=zeros(M,1);
+for i=1:(n-1)
+   nj=n-i;
+   x1=x(i);
+   for jj=1:nj
+      j=jj+i;      
+      if abs(x(j)-x1)<r
+         run(jj)=lastrun(jj)+1;
+         M1=min(M,run(jj));
+         for m=1:M1           
+            A(m)=A(m)+1;
+            if j<n
+               B(m)=B(m)+1;
+            end            
+         end
+      else
+         run(jj)=0;
+      end      
+   end
+   for j=1:nj
+      lastrun(j)=run(j);
+   end
+end
+N=n*(n-1)/2;
+B=[N;B(1:(M-1))];
+p=A./B;
+e=-log(p);
+Out_En=e(end);
